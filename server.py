@@ -19,8 +19,8 @@ while True:
 	if not data:
             print("All data is accepted")
             break
-	msg += data.decode()
-	conn.send(msg.upper().encode())
+msg += data.decode()
+conn.send(msg.upper().encode())
 
 print(msg)
 
