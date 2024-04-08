@@ -1,58 +1,41 @@
 import socket
-from threading import Thread
 
-def check_input(message=''):
-    stopped_msg = input(message)
-    if stopped_msg in ['exit', '/stop']:
-        exit()
-    return stopped_msg
+def connect_to_server(host, port):
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((host, port))
+    print(f'Соединение с сервером {host}:{port} установлено')
+    return client_socket
 
-connection_active = True
+def get_user_input(default):
+    user_input = input(f'Введите значение (по умолчанию {default}): ')
+    return user_input or default
 
-def receive_messages():
-    global connection_active
-    while True:
-        try:
-            data = sock.recv(1024).decode('utf-8')
-            print(data)
-        except (ConnectionRefusedError, ConnectionAbortedError, ConnectionResetError) as e:
-            connection_active = False
-            print(e)
-            break
+def send_data_to_server(client_socket: socket.socket, data):
+    client_socket.sendall(data.encode())
+    print(f'Отправлено серверу: {data}')
 
-def send_message(conn, message):
-    message = message.encode('utf-8')
-    conn.send(message)
+def receive_data_from_server(client_socket: socket.socket):
+    received_data = client_socket.recv(1024).decode()
+    print(f'Получено от сервера: {received_data}')
 
-try:
-    print("Для использования настроек по умолчанию ничего не вводите")
-    host = check_input("Имя хоста: ")
-    if not host:
-        host = '127.0.1.1'
-        print(f"Адрес хоста по умолчанию {host}")
-    port = check_input(f"Введите порт для {host}: ")
-    if not port:
-        port = 9000
-        print(f"Порт по умолчанию: {port}")
-    else:
-        port = int(port)
-except ValueError:
-    print("Неверно указан порт")
+if __name__ == "__main__":
+    HOST = '127.0.0.1'
+    PORT = 12345
 
-try:
-    sock = socket.socket()
-    sock.connect((host, port))
-    print(f"Подключение к {host}:{port} прошло успешно\n")
-except (socket.gaierror, ConnectionRefusedError) as e:
-    print(f"Не удается подключиться к {host}:{port} ({e})!")
+    custom_host = get_user_input(HOST)
+    custom_port = int(get_user_input(str(PORT)))
 
-Thread(target=receive_messages, daemon=True).start()
+    client_socket = connect_to_server(custom_host, custom_port)
 
-while True:
-    while True:
-        message = check_input()
-        if connection_active:
-            send_message(sock, message)
-        else:
-            sock.close()
-            break
+    try:
+        while True:
+            receive_data_from_server(client_socket)
+
+            data = input('Введите строку для отправки серверу: ')
+            send_data_to_server(client_socket, data)
+
+            if data == 'exit':
+                break
+
+    finally:
+        client_socket.close()
